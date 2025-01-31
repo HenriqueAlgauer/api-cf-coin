@@ -1,0 +1,49 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int     @id @default(autoincrement())
+  name       String
+  email      String  @unique
+  department String
+  coins      Int     @default(0)
+
+  transactions Coin[]
+}
+
+model Task {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String
+  reward      Int     // Quantidade de moedas que essa tarefa vale
+
+  coins       Coin[]
+}
+
+model Coin {
+  id          Int     @id @default(autoincrement())
+  userId      Int     
+  user        User    @relation(fields: [userId], references: [id]) 
+
+  taskId      Int     
+  task        Task    @relation(fields: [taskId], references: [id]) // Relacionamento com a tabela Task
+
+  amount      Int
+  status      String  @default("PENDING") // "APPROVED" | "REJECTED"
+
+  approvedBy  Int?    
+
+  createdAt   DateTime @default(now())
+}
