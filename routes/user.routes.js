@@ -40,7 +40,7 @@ export default async function userRoutes(app) {
   });
 
   app.post("/users", async (request, reply) => {
-    const { name, email, password, department } = request.body;
+    const { name, email, password, department, role } = request.body;
 
     // Verifica se o email já está cadastrado
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -52,7 +52,13 @@ export default async function userRoutes(app) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.create({
-      data: { name, email, password: hashedPassword, department },
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        department,
+        role,
+      },
     });
 
     reply.status(201).send({
@@ -60,6 +66,7 @@ export default async function userRoutes(app) {
       name: user.name,
       email: user.email,
       department: user.department,
+      role: user.role,
     });
   });
 }

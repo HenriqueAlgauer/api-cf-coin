@@ -14,6 +14,7 @@ export default async function authRoutes(app) {
         name: true,
         password: true,
         department: true, // Agora retorna o department
+        role: true,
       },
     });
 
@@ -27,9 +28,6 @@ export default async function authRoutes(app) {
       return reply.status(401).send({ error: "Email ou senha inválidos" });
     }
 
-    // Define o tipo do usuário baseado no department
-    const role = user.department === "ADMIN" ? "ADMIN" : "USER";
-
     // Retorna os dados necessários para o frontend
     reply.send({
       message: "Login realizado com sucesso!",
@@ -37,7 +35,8 @@ export default async function authRoutes(app) {
         id: user.id,
         name: user.name,
         email: user.email,
-        role, // Adiciona o role baseado no department
+        role: user.role, // Agora pega role do banco
+        department: user.department,
       },
     });
   });
