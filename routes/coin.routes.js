@@ -3,25 +3,51 @@ import { prisma } from "../prisma/client.js";
 export default async function coinRoutes(app) {
   // Criar uma moeda para um usuário
   app.post("/coins", async (request, reply) => {
-    const { userId, amount } = request.body;
+    try {
+      const { userId, taskId } = request.body;
 
-    const userExists = await prisma.user.findUnique({
-      where: { id: Number(userId) },
-    });
+      if (!userId || typeof userId !== "number") {
+        return reply.status(400).send({
+          error: "O campo 'userId' é obrigatório e deve ser um número.",
+        });
+      }
 
-    if (!userExists) {
-      return reply.status(404).send({ error: "Usuário não encontrado" });
+      if (!taskId || typeof taskId !== "number") {
+        return reply.status(400).send({
+          error: "O campo 'taskId' é obrigatório e deve ser um número.",
+        });
+      }
+
+      const userExists = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!userExists) {
+        return reply.status(404).send({ error: "Usuário não encontrado" });
+      }
+
+      const taskExists = await prisma.task.findUnique({
+        where: { id: taskId },
+      });
+
+      if (!taskExists) {
+        return reply.status(404).send({ error: "Tarefa não encontrada" });
+      }
+
+      const coin = await prisma.coin.create({
+        data: {
+          user: { connect: { id: userId } },
+          task: { connect: { id: taskId } },
+          amount: taskExists.reward,
+          status: "PENDING",
+        },
+      });
+
+      reply.status(201).send(coin);
+    } catch (error) {
+      console.error(error);
+      reply.status(500).send({ error: "Erro interno ao criar coin" });
     }
-
-    const coin = await prisma.coin.create({
-      data: {
-        userId: Number(userId),
-        amount,
-        status: "PENDING", // Define o status inicial
-      },
-    });
-
-    reply.status(201).send(coin);
   });
 
   app.get("/coins", async (request, reply) => {

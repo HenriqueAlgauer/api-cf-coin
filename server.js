@@ -5,6 +5,7 @@ import { prisma } from "./prisma/client.js";
 import userRoutes from "./routes/user.routes.js";
 import coinRoutes from "./routes/coin.routes.js";
 import authRoutes from "./routes/auth.routes.js";
+import taskRoutes from "./routes/task.routes.js";
 
 dotenv.config();
 
@@ -15,5 +16,6 @@ app.register(cors);
 app.register(userRoutes);
 app.register(coinRoutes);
 app.register(authRoutes);
+app.register(taskRoutes);
 
 app.listen({ port: 3000 }, () => console.log("🚀 Server running on port 3000"));
