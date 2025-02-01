@@ -3,6 +3,21 @@ import bcrypt from "bcrypt";
 
 export default async function userRoutes(app) {
   // Obter saldo total de moedas do usuário
+  app.get("/users", async (request, reply) => {
+    try {
+      const users = await prisma.user.findMany({
+        select: {
+          id: true,
+          name: true,
+          coins: true,
+        },
+      });
+      reply.send(users);
+    } catch (error) {
+      reply.status(500).send({ error: "Erro ao buscar usuários" });
+    }
+  });
+
   app.get("/users/:id/coins", async (request, reply) => {
     const { id } = request.params;
 
