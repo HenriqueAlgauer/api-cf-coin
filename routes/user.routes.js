@@ -1,4 +1,5 @@
 import { prisma } from "../prisma/client.js";
+import bcrypt from "bcrypt";
 
 export default async function userRoutes(app) {
   // Obter saldo total de moedas do usuário
@@ -21,5 +22,29 @@ export default async function userRoutes(app) {
     });
 
     reply.send(transactions);
+  });
+
+  app.post("/users", async (request, reply) => {
+    const { name, email, password, department } = request.body;
+
+    // Verifica se o email já está cadastrado
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return reply.status(400).send({ error: "Email já cadastrado" });
+    }
+
+    // Gera o hash da senha
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: { name, email, password: hashedPassword, department },
+    });
+
+    reply.status(201).send({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      department: user.department,
+    });
   });
 }
