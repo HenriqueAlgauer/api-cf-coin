@@ -7,18 +7,21 @@ export default async function userRoutes(app) {
     try {
       const users = await prisma.user.findMany({
         where: {
-          role: "USER",
+          role: "USER", // Filtra apenas usuários comuns
         },
         select: {
           id: true,
           name: true,
+          email: true, // 🔹 Adiciona o email
           coins: true,
-          department: true,
+          department: true, // 🔹 Adiciona o departamento
+          role: true, // 🔹 Adiciona o cargo (USER ou ADMIN)
         },
       });
 
       reply.send(users);
     } catch (error) {
+      console.error("Erro ao buscar usuários:", error);
       reply.status(500).send({ error: "Erro ao buscar usuários" });
     }
   });
