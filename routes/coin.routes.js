@@ -56,25 +56,33 @@ export default async function coinRoutes(app) {
   });
 
   app.get("/coins/pending", async (request, reply) => {
-    const pendingCoins = await prisma.coin.findMany({
-      where: { status: "PENDING" },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            department: true, // ✅ Agora retorna apenas os campos relevantes
+    try {
+      const pendingCoins = await prisma.coin.findMany({
+        where: { status: "PENDING" },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              department: true, // ✅ Inclui o departamento do usuário
+            },
+          },
+          task: {
+            select: {
+              id: true,
+              name: true, // ✅ Inclui o nome da tarefa
+            },
           },
         },
-        task: {
-          select: {
-            name: true, // ✅ Também inclui o nome da Tarefa associada
-          },
-        },
-      },
-    });
+      });
 
-    reply.send(pendingCoins);
+      reply.send(pendingCoins);
+    } catch (error) {
+      console.error(error);
+      reply
+        .status(500)
+        .send({ error: "Erro ao buscar solicitações pendentes." });
+    }
   });
 
   app.get("/coins/user/:userId", async (request, reply) => {
