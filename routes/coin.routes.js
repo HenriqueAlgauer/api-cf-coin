@@ -58,16 +58,50 @@ export default async function coinRoutes(app) {
   app.get("/coins/pending", async (request, reply) => {
     const pendingCoins = await prisma.coin.findMany({
       where: { status: "PENDING" },
-      include: { user: true }, // Inclui os detalhes do usuário que solicitou a moeda
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            department: true, // ✅ Agora retorna apenas os campos relevantes
+          },
+        },
+        task: {
+          select: {
+            name: true, // ✅ Também inclui o nome da Tarefa associada
+          },
+        },
+      },
     });
 
     reply.send(pendingCoins);
   });
 
-  // Aprovar uma moeda (definir qual admin aprovou)
+  app.get("/coins/user/:userId", async (request, reply) => {
+    const { userId } = request.params;
+
+    const userCoins = await prisma.coin.findMany({
+      where: { userId: Number(userId) },
+      include: {
+        task: { select: { name: true } }, // ✅ Retorna o nome da Task
+      },
+    });
+
+    reply.send(userCoins);
+  });
+
   app.patch("/coins/:id/approve", async (request, reply) => {
     const { id } = request.params;
     const { adminId } = request.body;
+
+    // Verifica se o adminId pertence a um usuário com role 'ADMIN'
+    const admin = await prisma.user.findUnique({ where: { id: adminId } });
+
+    if (!admin || admin.role !== "ADMIN") {
+      return reply
+        .status(403)
+        .send({ error: "Acesso negado: Apenas ADMINs podem aprovar moedas." });
+    }
 
     const coin = await prisma.coin.findUnique({ where: { id: Number(id) } });
 
