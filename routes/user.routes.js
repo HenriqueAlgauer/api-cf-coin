@@ -6,12 +6,17 @@ export default async function userRoutes(app) {
   app.get("/users", async (request, reply) => {
     try {
       const users = await prisma.user.findMany({
+        where: {
+          role: "USER",
+        },
         select: {
           id: true,
           name: true,
           coins: true,
+          department: true,
         },
       });
+
       reply.send(users);
     } catch (error) {
       reply.status(500).send({ error: "Erro ao buscar usuários" });
