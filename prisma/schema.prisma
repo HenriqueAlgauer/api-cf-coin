@@ -18,10 +18,10 @@ model User {
   name       String
   email      String  @unique
   password   String 
-  department String  // 'HARDWARE' | 'TOTEM' | 'ADMIN'
+  department String  // 'HARDWARE' | 'TOTEM' | 'ADM'
   role       String  @default("USER")
   coins      Int     @default(0)
-
+  
   transactions Coin[]
 }
 
@@ -37,10 +37,10 @@ model Task {
 model Coin {
   id          Int     @id @default(autoincrement())
   userId      Int     
-  user        User    @relation(fields: [userId], references: [id]) 
+  user        User    @relation(fields: [userId], references: [id],  onDelete: Cascade) 
 
-  taskId      Int     
-  task        Task    @relation(fields: [taskId], references: [id]) // Relacionamento com a tabela Task
+  taskId      Int?     
+  task        Task?    @relation(fields: [taskId], references: [id]) // Relacionamento com a tabela Task
 
   amount      Int
   status      String  @default("PENDING") // "APPROVED" | "REJECTED"
