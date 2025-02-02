@@ -26,6 +26,63 @@ export default async function userRoutes(app) {
     }
   });
 
+  app.get("/users/:id", async (request, reply) => {
+    try {
+      const { id } = request.params;
+
+      const user = await prisma.user.findUnique({
+        where: { id: Number(id) },
+        select: {
+          name: true,
+          email: true,
+          department: true,
+          coins: true,
+        },
+      });
+
+      if (!user) {
+        return reply.status(404).send({ error: "Usuário não encontrado." });
+      }
+
+      reply.send(user);
+    } catch (error) {
+      console.error("Erro ao buscar usuário:", error);
+      reply.status(500).send({ error: "Erro ao buscar usuário." });
+    }
+  });
+
+  // ✅ Atualizar apenas o email do usuário
+  app.patch("/users/:id/email", async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const { email } = request.body;
+
+      if (!email) {
+        return reply
+          .status(400)
+          .send({ error: "O campo 'email' é obrigatório." });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: Number(id) },
+        data: { email },
+        select: {
+          name: true,
+          email: true,
+          department: true,
+          coins: true,
+        },
+      });
+
+      reply.send(updatedUser);
+    } catch (error) {
+      console.error("Erro ao atualizar o email do usuário:", error);
+      reply
+        .status(500)
+        .send({ error: "Erro ao atualizar o email do usuário." });
+    }
+  });
+
   app.get("/users/:id/coins", async (request, reply) => {
     const { id } = request.params;
 
