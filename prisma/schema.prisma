@@ -30,6 +30,8 @@ model Task {
   name        String  @unique
   description String
   reward      Int     // Quantidade de moedas que essa tarefa vale
+  
+  visibility  String  @default("AMBOS") // "ADMIN", "USER" ou "AMBOS"
 
   coins       Coin[]
 }
@@ -44,8 +46,10 @@ model Coin {
 
   amount      Int
   status      String  @default("PENDING") // "APPROVED" | "REJECTED"
+  message     String?
 
-  approvedBy  Int?    
+  approvedBy  Int? 
 
   createdAt   DateTime @default(now())
+  updatedAt   DateTime? @updatedAt
 }
