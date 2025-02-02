@@ -4,7 +4,7 @@ export default async function coinRoutes(app) {
   // Criar uma moeda para um usuário
   app.post("/coins", async (request, reply) => {
     try {
-      const { userId, taskId } = request.body;
+      const { userId, taskId, message } = request.body;
 
       if (!userId || typeof userId !== "number") {
         return reply.status(400).send({
@@ -21,18 +21,14 @@ export default async function coinRoutes(app) {
       const userExists = await prisma.user.findUnique({
         where: { id: userId },
       });
-
-      if (!userExists) {
+      if (!userExists)
         return reply.status(404).send({ error: "Usuário não encontrado" });
-      }
 
       const taskExists = await prisma.task.findUnique({
         where: { id: taskId },
       });
-
-      if (!taskExists) {
+      if (!taskExists)
         return reply.status(404).send({ error: "Tarefa não encontrada" });
-      }
 
       const coin = await prisma.coin.create({
         data: {
@@ -40,6 +36,7 @@ export default async function coinRoutes(app) {
           task: { connect: { id: taskId } },
           amount: taskExists.reward,
           status: "PENDING",
+          message: message || null, // Mensagem do usuário ao solicitar
         },
       });
 
@@ -102,20 +99,15 @@ export default async function coinRoutes(app) {
     const { id } = request.params;
     const { adminId } = request.body;
 
-    // Verifica se o adminId pertence a um usuário com role 'ADMIN'
     const admin = await prisma.user.findUnique({ where: { id: adminId } });
-
     if (!admin || admin.role !== "ADMIN") {
       return reply
         .status(403)
-        .send({ error: "Acesso negado: Apenas ADMINs podem aprovar moedas." });
+        .send({ error: "Apenas ADMINs podem aprovar moedas." });
     }
 
     const coin = await prisma.coin.findUnique({ where: { id: Number(id) } });
-
-    if (!coin) {
-      return reply.status(404).send({ error: "Moeda não encontrada" });
-    }
+    if (!coin) return reply.status(404).send({ error: "Moeda não encontrada" });
 
     if (coin.status !== "PENDING") {
       return reply.status(400).send({ error: "Moeda já foi processada" });
@@ -126,6 +118,7 @@ export default async function coinRoutes(app) {
       data: {
         status: "APPROVED",
         approvedBy: adminId,
+        updatedAt: new Date(), // Atualiza timestamp
       },
     });
 
@@ -141,11 +134,15 @@ export default async function coinRoutes(app) {
     const { id } = request.params;
     const { adminId } = request.body;
 
-    const coin = await prisma.coin.findUnique({ where: { id: Number(id) } });
-
-    if (!coin) {
-      return reply.status(404).send({ error: "Moeda não encontrada" });
+    const admin = await prisma.user.findUnique({ where: { id: adminId } });
+    if (!admin || admin.role !== "ADMIN") {
+      return reply
+        .status(403)
+        .send({ error: "Apenas ADMINs podem rejeitar moedas." });
     }
+
+    const coin = await prisma.coin.findUnique({ where: { id: Number(id) } });
+    if (!coin) return reply.status(404).send({ error: "Moeda não encontrada" });
 
     if (coin.status !== "PENDING") {
       return reply.status(400).send({ error: "Moeda já foi processada" });
@@ -156,6 +153,7 @@ export default async function coinRoutes(app) {
       data: {
         status: "REJECTED",
         approvedBy: adminId,
+        updatedAt: new Date(),
       },
     });
 
