@@ -77,4 +77,58 @@ export default async function userRoutes(app) {
       role: user.role,
     });
   });
+
+  app.delete("/users/:id", async (request, reply) => {
+    const { id } = request.params;
+
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: Number(id) },
+      });
+
+      if (!user) {
+        return reply.status(404).send({ error: "Usuário não encontrado" });
+      }
+
+      // 🔥 Apaga todas as coins associadas ao usuário antes de excluí-lo
+      await prisma.coin.deleteMany({
+        where: { userId: Number(id) },
+      });
+
+      // 🔥 Agora podemos excluir o usuário sem violação de chave estrangeira
+      await prisma.user.delete({
+        where: { id: Number(id) },
+      });
+
+      reply.send({ message: "Usuário excluído com sucesso" });
+    } catch (error) {
+      console.error(error);
+      reply.status(500).send({ error: "Erro ao excluir o usuário" });
+    }
+  });
+
+  app.patch("/users/:id", async (request, reply) => {
+    const { id } = request.params;
+    const { name, email, department, role, coins } = request.body;
+
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: Number(id) },
+      });
+
+      if (!user) {
+        return reply.status(404).send({ error: "Usuário não encontrado" });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: Number(id) },
+        data: { name, email, department, role, coins },
+      });
+
+      reply.send(updatedUser);
+    } catch (error) {
+      console.error(error);
+      reply.status(500).send({ error: "Erro ao atualizar o usuário" });
+    }
+  });
 }
