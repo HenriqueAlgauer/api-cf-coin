@@ -4,25 +4,25 @@ export default async function taskRoutes(app) {
   // Criar uma nova tarefa
   app.post("/tasks", async (request, reply) => {
     try {
-      const { name, description, reward, type } = request.body;
+      const { name, description, reward, visibility } = request.body;
 
       if (
         !name ||
         !description ||
-        !reward ||
+        reward === undefined ||
         typeof reward !== "number" ||
-        !type
+        !visibility
       ) {
         return reply.status(400).send({
           error:
-            "Todos os campos são obrigatórios e 'reward' deve ser um número.",
+            "Todos os campos são obrigatórios, e 'reward' deve ser um número.",
         });
       }
 
-      if (!["ADMIN", "USER", "AMBOS"].includes(type)) {
-        return reply
-          .status(400)
-          .send({ error: "O campo 'type' deve ser ADMIN, USER ou AMBOS." });
+      if (!["ADMIN", "USER", "AMBOS"].includes(visibility)) {
+        return reply.status(400).send({
+          error: "O campo 'visibility' deve ser ADMIN, USER ou AMBOS.",
+        });
       }
 
       const task = await prisma.task.create({
@@ -30,25 +30,66 @@ export default async function taskRoutes(app) {
           name,
           description,
           reward,
-          type, // Define a visibilidade da tarefa
+          visibility, // ✅ Correção do nome do campo
         },
       });
 
       reply.status(201).send(task);
     } catch (error) {
-      console.error(error);
-      reply.status(500).send({ error: "Erro ao criar a tarefa." });
+      console.error("Erro ao criar a tarefa:", error);
+      reply.status(500).send({ error: "Erro interno ao criar a tarefa." });
     }
   });
 
   // Listar todas as tarefas filtradas por tipo
+  // Atualizar uma tarefa pelo ID
+  app.put("/tasks/:id", async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const { name, description, reward, visibility } = request.body;
+
+      if (
+        !name &&
+        !description &&
+        (reward === undefined || reward === null) &&
+        !visibility
+      ) {
+        return reply
+          .status(400)
+          .send({ error: "Forneça pelo menos um campo para atualizar." });
+      }
+
+      if (visibility && !["ADMIN", "USER", "AMBOS"].includes(visibility)) {
+        return reply.status(400).send({
+          error: "O campo 'visibility' deve ser ADMIN, USER ou AMBOS.",
+        });
+      }
+
+      const task = await prisma.task.update({
+        where: { id: Number(id) },
+        data: {
+          ...(name && { name }),
+          ...(description && { description }),
+          ...(reward !== undefined && reward !== null && { reward }),
+          ...(visibility && { visibility }),
+        },
+      });
+
+      reply.send(task);
+    } catch (error) {
+      console.error("Erro ao atualizar a tarefa:", error);
+      reply.status(500).send({ error: "Erro ao atualizar a tarefa." });
+    }
+  });
+
+  // Listar todas as tarefas, filtrando por role se necessário
   app.get("/tasks", async (request, reply) => {
     try {
-      const { role } = request.query; // Filtra por usuário ADMIN ou USER
+      const { role } = request.query; // Filtra por ADMIN, USER ou retorna todas
 
       const whereClause = role
         ? {
-            OR: [{ type: "AMBOS" }, { type: role }],
+            OR: [{ visibility: "AMBOS" }, { visibility: role }],
           }
         : {}; // Retorna todas se nenhum filtro for passado
 
@@ -56,42 +97,32 @@ export default async function taskRoutes(app) {
 
       reply.send(tasks);
     } catch (error) {
-      console.error(error);
+      console.error("Erro ao buscar as tarefas:", error);
       reply.status(500).send({ error: "Erro ao buscar as tarefas." });
     }
   });
-
-  // Atualizar uma tarefa pelo ID
-  app.put("/tasks/:id", async (request, reply) => {
+  app.delete("/tasks/:id", async (request, reply) => {
     try {
       const { id } = request.params;
-      const { name, description, reward, type } = request.body;
 
-      if (
-        !name &&
-        !description &&
-        (reward === undefined || reward === null) &&
-        !type
-      ) {
-        return reply
-          .status(400)
-          .send({ error: "Forneça pelo menos um campo para atualizar." });
-      }
-
-      const task = await prisma.task.update({
+      // Verifica se a tarefa existe antes de tentar excluir
+      const taskExists = await prisma.task.findUnique({
         where: { id: Number(id) },
-        data: {
-          name,
-          description,
-          reward,
-          type,
-        },
       });
 
-      reply.send(task);
+      if (!taskExists) {
+        return reply.status(404).send({ error: "Tarefa não encontrada." });
+      }
+
+      // Exclui a tarefa
+      await prisma.task.delete({
+        where: { id: Number(id) },
+      });
+
+      reply.send({ message: "Tarefa deletada com sucesso." });
     } catch (error) {
-      console.error(error);
-      reply.status(500).send({ error: "Erro ao atualizar a tarefa." });
+      console.error("Erro ao deletar a tarefa:", error);
+      reply.status(500).send({ error: "Erro ao deletar a tarefa." });
     }
   });
 }
