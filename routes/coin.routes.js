@@ -83,16 +83,25 @@ export default async function coinRoutes(app) {
   });
 
   app.get("/coins/user/:userId", async (request, reply) => {
-    const { userId } = request.params;
+    try {
+      const { userId } = request.params;
 
-    const userCoins = await prisma.coin.findMany({
-      where: { userId: Number(userId) },
-      include: {
-        task: { select: { name: true } }, // ✅ Retorna o nome da Task
-      },
-    });
+      if (!userId || isNaN(userId)) {
+        return reply.status(400).send({ error: "ID do usuário inválido." });
+      }
 
-    reply.send(userCoins);
+      const userCoins = await prisma.coin.findMany({
+        where: { userId: Number(userId) },
+        include: {
+          task: { select: { name: true } }, // ✅ Retorna o nome da Task
+        },
+      });
+
+      reply.send(userCoins);
+    } catch (error) {
+      console.error("Erro ao buscar moedas do usuário:", error);
+      reply.status(500).send({ error: "Erro ao buscar as moedas." });
+    }
   });
 
   app.patch("/coins/:id/approve", async (request, reply) => {
@@ -147,6 +156,39 @@ export default async function coinRoutes(app) {
     }
   });
 
+  app.patch("/coins/:id", async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const { message } = request.body;
+
+      if (!id) {
+        return reply
+          .status(400)
+          .send({ error: "ID da solicitação é obrigatório." });
+      }
+
+      // Verifica se a Coin existe
+      const coinExists = await prisma.coin.findUnique({
+        where: { id: Number(id) },
+      });
+
+      if (!coinExists) {
+        return reply.status(404).send({ error: "Solicitação não encontrada." });
+      }
+
+      // Atualiza apenas a mensagem da solicitação
+      const updatedCoin = await prisma.coin.update({
+        where: { id: Number(id) },
+        data: { message: message || "" }, // ✅ Garante que o campo nunca será `null`
+      });
+
+      reply.send(updatedCoin);
+    } catch (error) {
+      console.error("Erro ao atualizar a solicitação:", error);
+      reply.status(500).send({ error: "Erro ao atualizar a solicitação." });
+    }
+  });
+
   app.patch("/coins/:id/reject", async (request, reply) => {
     const { id } = request.params;
     const { adminId } = request.body;
@@ -175,5 +217,30 @@ export default async function coinRoutes(app) {
     });
 
     reply.send(updatedCoin);
+  });
+
+  app.delete("/coins/:id", async (request, reply) => {
+    try {
+      const { id } = request.params;
+
+      // Verifica se a solicitação existe antes de excluir
+      const coinExists = await prisma.coin.findUnique({
+        where: { id: Number(id) },
+      });
+
+      if (!coinExists) {
+        return reply.status(404).send({ error: "Solicitação não encontrada." });
+      }
+
+      // Exclui a solicitação
+      await prisma.coin.delete({
+        where: { id: Number(id) },
+      });
+
+      reply.send({ message: "Solicitação excluída com sucesso." });
+    } catch (error) {
+      console.error("Erro ao excluir a solicitação:", error);
+      reply.status(500).send({ error: "Erro ao excluir a solicitação." });
+    }
   });
 }

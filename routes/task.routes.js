@@ -101,6 +101,21 @@ export default async function taskRoutes(app) {
       reply.status(500).send({ error: "Erro ao buscar as tarefas." });
     }
   });
+
+  app.get("/tasks/user", async (request, reply) => {
+    try {
+      const tasks = await prisma.task.findMany({
+        where: {
+          OR: [{ visibility: "AMBOS" }, { visibility: "USER" }],
+        },
+      });
+      reply.send(tasks);
+    } catch (error) {
+      console.error("Erro ao buscar tarefas para usuário:", error);
+      reply.status(500).send({ error: "Erro ao buscar tarefas." });
+    }
+  });
+
   app.delete("/tasks/:id", async (request, reply) => {
     try {
       const { id } = request.params;
