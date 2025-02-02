@@ -38,6 +38,9 @@ export default async function coinRoutes(app) {
           status: "PENDING",
           message: message || null, // Mensagem do usuário ao solicitar
         },
+        include: {
+          task: true,
+        },
       });
 
       reply.status(201).send(coin);
