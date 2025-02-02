@@ -23,6 +23,7 @@ model User {
   coins      Int     @default(0)
   
   transactions Coin[]
+  prizes       PrizeRedemption[]
 }
 
 model Task {
@@ -52,4 +53,26 @@ model Coin {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime? @updatedAt
+}
+
+model Prize {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String
+  cost        Int     // Custo em CF Coins para resgate
+
+  redemptions PrizeRedemption[]
+}
+
+model PrizeRedemption {
+  id        Int     @id @default(autoincrement())
+  userId    Int     
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade) 
+
+  prizeId   Int     
+  prize     Prize   @relation(fields: [prizeId], references: [id], onDelete: Cascade)
+
+  status    String  @default("PENDING") // "PENDING" | "APPROVED" | "REJECTED"
+  createdAt DateTime @default(now())
+  approvedBy Int?   // ADMIN que aprovou o resgate
 }
