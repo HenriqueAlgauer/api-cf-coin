@@ -74,34 +74,35 @@ export default async function prizeRoutes(app) {
   // ✅ Solicitar resgate de prêmio (Usuário)
   app.post("/prize-redemptions", async (request, reply) => {
     try {
-      let { userId, prizeId } = request.body;
+      const { userId, prizeId } = request.body;
 
-      // Converta para número caso venham como string
-      userId = Number(userId);
-      prizeId = Number(prizeId);
-
-      if (!userId || isNaN(userId) || !prizeId || isNaN(prizeId)) {
-        return reply.status(400).send({
-          error: "Usuário e Prêmio são obrigatórios e devem ser números.",
-        });
+      if (!userId || !prizeId) {
+        return reply
+          .status(400)
+          .send({ error: "Usuário e Prêmio são obrigatórios." });
       }
 
       const user = await prisma.user.findUnique({ where: { id: userId } });
-      if (!user) {
-        return reply.status(404).send({ error: "Usuário não encontrado." });
-      }
-
       const prize = await prisma.prize.findUnique({ where: { id: prizeId } });
-      if (!prize) {
+
+      if (!user)
+        return reply.status(404).send({ error: "Usuário não encontrado." });
+      if (!prize)
         return reply.status(404).send({ error: "Prêmio não encontrado." });
-      }
 
       if (user.coins < prize.cost) {
         return reply
-          .status(403) // ❌ Código HTTP adequado para "Forbidden"
+          .status(400)
           .send({ error: "Moedas insuficientes para resgatar este prêmio." });
       }
 
+      // 🔹 Subtrai as moedas do usuário imediatamente
+      await prisma.user.update({
+        where: { id: userId },
+        data: { coins: { decrement: prize.cost } },
+      });
+
+      // 🔹 Cria a solicitação de resgate com status "PENDING"
       const redemption = await prisma.prizeRedemption.create({
         data: { userId, prizeId, status: "PENDING" },
       });
@@ -132,57 +133,100 @@ export default async function prizeRoutes(app) {
   });
 
   // ✅ Aprovar ou Rejeitar Resgate de Prêmio (ADMIN)
-  app.patch("/prize-redemptions/:id", async (request, reply) => {
+  app.patch("/prize-redemptions/:id/approve", async (request, reply) => {
     try {
       const { id } = request.params;
-      const { status, adminId } = request.body;
+      console.log("🔹 Recebendo solicitação de aprovação para o ID:", id);
 
-      if (!["APPROVED", "REJECTED"].includes(status)) {
-        return reply.status(400).send({ error: "Status inválido." });
+      // Verifica se o ID é um número válido
+      if (isNaN(Number(id))) {
+        console.error("❌ ID inválido:", id);
+        return reply.status(400).send({ error: "ID inválido para aprovação." });
       }
 
+      // Busca a solicitação de resgate com os dados do prêmio
       const redemption = await prisma.prizeRedemption.findUnique({
         where: { id: Number(id) },
+        include: { prize: true }, // Inclui detalhes do prêmio
+      });
+
+      if (!redemption) {
+        console.error("❌ Resgate não encontrado para o ID:", id);
+        return reply.status(404).send({ error: "Resgate não encontrado." });
+      }
+
+      // Verifica se o usuário tem saldo suficiente
+      const user = await prisma.user.findUnique({
+        where: { id: redemption.userId },
+      });
+
+      if (!user) {
+        console.error("❌ Usuário não encontrado:", redemption.userId);
+        return reply.status(404).send({ error: "Usuário não encontrado." });
+      }
+
+      if (user.coins < redemption.prize.cost) {
+        console.error(
+          `❌ Moedas insuficientes: Usuário tem ${user.coins}, precisa de ${redemption.prize.cost}`
+        );
+        return reply.status(400).send({
+          error: "Usuário não tem CF Coins suficientes para este resgate.",
+        });
+      }
+
+      // Atualiza o status para "APPROVED"
+      const updatedRequest = await prisma.prizeRedemption.update({
+        where: { id: Number(id) },
+        data: { status: "APPROVED" },
+      });
+
+      // Subtrai os CF Coins do usuário
+      await prisma.user.update({
+        where: { id: redemption.userId },
+        data: { coins: { decrement: redemption.prize.cost } },
+      });
+
+      console.log("✅ Resgate aprovado com sucesso:", updatedRequest);
+      reply.send(updatedRequest);
+    } catch (error) {
+      console.error("❌ Erro ao aprovar o resgate:", error);
+      reply.status(500).send({ error: "Erro ao aprovar o resgate." });
+    }
+  });
+
+  app.patch("/prize-redemptions/:id/reject", async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const redemption = await prisma.prizeRedemption.findUnique({
+        where: { id: Number(id) },
+        include: { prize: true, user: true }, // Precisamos do usuário e do prêmio para restaurar os coins
       });
 
       if (!redemption)
         return reply.status(404).send({ error: "Resgate não encontrado." });
 
-      if (status === "APPROVED") {
-        const user = await prisma.user.findUnique({
-          where: { id: redemption.userId },
-        });
-        const prize = await prisma.prize.findUnique({
-          where: { id: redemption.prizeId },
-        });
-
-        if (!user || !prize) {
-          return reply
-            .status(404)
-            .send({ error: "Usuário ou prêmio não encontrado." });
-        }
-
-        if (user.coins < prize.cost) {
-          return reply
-            .status(400)
-            .send({ error: "Usuário não tem moedas suficientes." });
-        }
-
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { coins: user.coins - prize.cost },
-        });
+      if (redemption.status !== "PENDING") {
+        return reply
+          .status(400)
+          .send({ error: "A solicitação já foi processada." });
       }
 
-      const updatedRedemption = await prisma.prizeRedemption.update({
-        where: { id: Number(id) },
-        data: { status, approvedBy: adminId || null },
+      // 🔹 Devolve as moedas ao usuário
+      await prisma.user.update({
+        where: { id: redemption.userId },
+        data: { coins: { increment: redemption.prize.cost } },
       });
 
-      reply.send(updatedRedemption);
+      // 🔹 Atualiza o status para "REJECTED"
+      const updatedRequest = await prisma.prizeRedemption.update({
+        where: { id: Number(id) },
+        data: { status: "REJECTED" },
+      });
+
+      reply.send(updatedRequest);
     } catch (error) {
-      console.error("Erro ao aprovar/rejeitar resgate:", error);
-      reply.status(500).send({ error: "Erro ao processar resgate." });
+      console.error("Erro ao rejeitar o resgate:", error);
+      reply.status(500).send({ error: "Erro ao rejeitar o resgate." });
     }
   });
 
