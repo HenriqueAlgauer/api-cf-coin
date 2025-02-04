@@ -74,25 +74,31 @@ export default async function prizeRoutes(app) {
   // ✅ Solicitar resgate de prêmio (Usuário)
   app.post("/prize-redemptions", async (request, reply) => {
     try {
-      const { userId, prizeId } = request.body;
+      let { userId, prizeId } = request.body;
 
-      if (!userId || !prizeId) {
-        return reply
-          .status(400)
-          .send({ error: "Usuário e Prêmio são obrigatórios." });
+      // Converta para número caso venham como string
+      userId = Number(userId);
+      prizeId = Number(prizeId);
+
+      if (!userId || isNaN(userId) || !prizeId || isNaN(prizeId)) {
+        return reply.status(400).send({
+          error: "Usuário e Prêmio são obrigatórios e devem ser números.",
+        });
       }
 
       const user = await prisma.user.findUnique({ where: { id: userId } });
-      const prize = await prisma.prize.findUnique({ where: { id: prizeId } });
-
-      if (!user)
+      if (!user) {
         return reply.status(404).send({ error: "Usuário não encontrado." });
-      if (!prize)
+      }
+
+      const prize = await prisma.prize.findUnique({ where: { id: prizeId } });
+      if (!prize) {
         return reply.status(404).send({ error: "Prêmio não encontrado." });
+      }
 
       if (user.coins < prize.cost) {
         return reply
-          .status(400)
+          .status(403) // ❌ Código HTTP adequado para "Forbidden"
           .send({ error: "Moedas insuficientes para resgatar este prêmio." });
       }
 
