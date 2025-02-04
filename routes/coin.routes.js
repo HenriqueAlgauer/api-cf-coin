@@ -1,4 +1,5 @@
 import { prisma } from "../prisma/client.js";
+import { approveCoinRequest } from "../service/coin.service.js";
 
 export default async function coinRoutes(app) {
   // Criar uma moeda para um usuário
@@ -112,50 +113,11 @@ export default async function coinRoutes(app) {
       const { id } = request.params;
       const { adminId } = request.body;
 
-      if (!adminId) {
-        return reply
-          .status(400)
-          .send({ error: "AdminId é obrigatório para aprovar a coin." });
-      }
-
-      const admin = await prisma.user.findUnique({
-        where: { id: Number(adminId) },
-      });
-
-      if (!admin || admin.role !== "ADMIN") {
-        return reply
-          .status(403)
-          .send({ error: "Apenas ADMINs podem aprovar moedas." });
-      }
-
-      const coin = await prisma.coin.findUnique({ where: { id: Number(id) } });
-
-      if (!coin) {
-        return reply.status(404).send({ error: "Moeda não encontrada." });
-      }
-
-      if (coin.status !== "PENDING") {
-        return reply.status(400).send({ error: "Moeda já foi processada." });
-      }
-
-      const updatedCoin = await prisma.coin.update({
-        where: { id: Number(id) },
-        data: {
-          status: "APPROVED",
-          approvedBy: Number(adminId),
-          updatedAt: new Date(),
-        },
-      });
-
-      await prisma.user.update({
-        where: { id: coin.userId },
-        data: { coins: { increment: coin.amount } },
-      });
-
+      const updatedCoin = await approveCoinRequest(id, adminId);
       reply.send(updatedCoin);
     } catch (error) {
       console.error("Erro ao aprovar a coin:", error);
-      reply.status(500).send({ error: "Erro interno ao aprovar a coin." });
+      reply.status(400).send({ error: error.message });
     }
   });
 
