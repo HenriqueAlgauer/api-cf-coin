@@ -136,7 +136,6 @@ export default async function prizeRoutes(app) {
   app.patch("/prize-redemptions/:id/approve", async (request, reply) => {
     try {
       const { id } = request.params;
-      console.log("🔹 Recebendo solicitação de aprovação para o ID:", id);
 
       // Verifica se o ID é um número válido
       if (isNaN(Number(id))) {
@@ -186,7 +185,6 @@ export default async function prizeRoutes(app) {
         data: { coins: { decrement: redemption.prize.cost } },
       });
 
-      console.log("✅ Resgate aprovado com sucesso:", updatedRequest);
       reply.send(updatedRequest);
     } catch (error) {
       console.error("❌ Erro ao aprovar o resgate:", error);
