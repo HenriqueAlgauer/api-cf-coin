@@ -78,22 +78,24 @@ export async function updateCoinMessageService({ coinId, message }) {
  * Rejeita uma solicitação de coin.
  */
 export async function rejectCoinService(coinId, adminId) {
-  const admin = await prisma.user.findUnique({
-    where: { id: Number(adminId) },
-  });
+  // Converte o adminId para número e verifica se é um administrador
+  const numericAdminId = Number(adminId);
+  const admin = await prisma.user.findUnique({ where: { id: numericAdminId } });
   if (!admin || admin.role !== "ADMIN") {
     throw new Error("Apenas ADMINs podem rejeitar moedas.");
   }
 
+  // Verifica a existência da coin e seu status
   const coin = await prisma.coin.findUnique({ where: { id: Number(coinId) } });
   if (!coin) throw new Error("Moeda não encontrada");
   if (coin.status !== "PENDING") throw new Error("Moeda já foi processada");
 
+  // Atualiza a coin, garantindo que approvedBy seja um número
   const updatedCoin = await prisma.coin.update({
     where: { id: Number(coinId) },
     data: {
       status: "REJECTED",
-      approvedBy: adminId,
+      approvedBy: numericAdminId, // Agora é um número
       updatedAt: new Date(),
     },
   });
