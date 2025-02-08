@@ -1,26 +1,20 @@
 // src/controllers/coin.controller.js
-import { approveCoinRequest } from "../services/coin.service.js";
+import { prisma } from "../prisma/client.js";
+import {
+  createCoinService,
+  approveCoinRequest,
+  updateCoinMessageService,
+  rejectCoinService,
+  deleteCoinService,
+} from "../services/coin.service.js";
 
-export async function approveCoin(request, reply) {
+/**
+ * Cria uma nova solicitação de coin.
+ */
+export async function createCoin(req, reply) {
   try {
-    const { id } = request.params;
-    // Aqui, após o middleware verifyAdmin, o admin já foi verificado.
-    // Caso queira, você pode extrair o adminId do body (ou de request.user se usar token)
-    const { adminId } = request.body;
+    const { userId, taskId, message } = req.body;
 
-    const updatedCoin = await approveCoinRequest(id, adminId);
-    reply.send(updatedCoin);
-  } catch (error) {
-    console.error("Erro ao aprovar a coin:", error);
-    reply.status(400).send({ error: error.message });
-  }
-}
-
-// Outros controllers podem ser criados de forma similar, por exemplo:
-export async function createCoin(request, reply) {
-  try {
-    const { userId, taskId, message } = request.body;
-    // Validações iniciais podem ser feitas aqui ou delegadas para um service
     if (!userId || typeof userId !== "number") {
       return reply
         .status(400)
@@ -36,16 +30,129 @@ export async function createCoin(request, reply) {
         });
     }
 
-    // Aqui você pode chamar um service para criar a coin (separando a lógica)
-    const coin =
-      await /* service.createCoin({ userId, taskId, message }) */ null;
-
-    // Por enquanto, vamos replicar a lógica que já está no coin.routes:
-    // (aqui você pode incluir o código do prisma.coin.create se não houver um service)
-
+    const coin = await createCoinService({ userId, taskId, message });
     reply.status(201).send(coin);
   } catch (error) {
     console.error(error);
     reply.status(500).send({ error: "Erro interno ao criar coin" });
+  }
+}
+
+/**
+ * Lista todas as coins.
+ */
+export async function getCoins(req, reply) {
+  try {
+    const coins = await prisma.coin.findMany();
+    reply.send(coins);
+  } catch (error) {
+    console.error(error);
+    reply.status(500).send({ error: "Erro ao buscar coins" });
+  }
+}
+
+/**
+ * Lista as coins com status PENDING.
+ */
+export async function getPendingCoins(req, reply) {
+  try {
+    const pendingCoins = await prisma.coin.findMany({
+      where: { status: "PENDING" },
+      include: {
+        user: { select: { id: true, name: true, department: true } },
+        task: { select: { id: true, name: true } },
+      },
+    });
+    reply.send(pendingCoins);
+  } catch (error) {
+    console.error(error);
+    reply.status(500).send({ error: "Erro ao buscar solicitações pendentes." });
+  }
+}
+
+/**
+ * Lista as coins de um usuário específico.
+ */
+export async function getUserCoins(req, reply) {
+  try {
+    const { userId } = req.params;
+    if (!userId || isNaN(userId)) {
+      return reply.status(400).send({ error: "ID do usuário inválido." });
+    }
+    const userCoins = await prisma.coin.findMany({
+      where: { userId: Number(userId) },
+      include: { task: { select: { name: true } } },
+    });
+    reply.send(userCoins);
+  } catch (error) {
+    console.error("Erro ao buscar moedas do usuário:", error);
+    reply.status(500).send({ error: "Erro ao buscar as moedas." });
+  }
+}
+
+/**
+ * Aprova uma solicitação de coin.
+ */
+export async function approveCoin(req, reply) {
+  try {
+    const { id } = req.params;
+    const { adminId } = req.body;
+    const updatedCoin = await approveCoinRequest(id, adminId);
+    reply.send(updatedCoin);
+  } catch (error) {
+    console.error("Erro ao aprovar a coin:", error);
+    reply.status(400).send({ error: error.message });
+  }
+}
+
+/**
+ * Atualiza a mensagem de uma solicitação.
+ */
+export async function updateCoinMessage(req, reply) {
+  try {
+    const { id } = req.params;
+    const { message } = req.body;
+    if (!id) {
+      return reply
+        .status(400)
+        .send({ error: "ID da solicitação é obrigatório." });
+    }
+    const updatedCoin = await updateCoinMessageService({
+      coinId: Number(id),
+      message,
+    });
+    reply.send(updatedCoin);
+  } catch (error) {
+    console.error("Erro ao atualizar a solicitação:", error);
+    reply.status(500).send({ error: "Erro ao atualizar a solicitação." });
+  }
+}
+
+/**
+ * Rejeita uma solicitação de coin.
+ */
+export async function rejectCoin(req, reply) {
+  try {
+    const { id } = req.params;
+    const { adminId } = req.body;
+    const updatedCoin = await rejectCoinService(id, adminId);
+    reply.send(updatedCoin);
+  } catch (error) {
+    console.error("Erro ao rejeitar a coin:", error);
+    reply.status(400).send({ error: error.message });
+  }
+}
+
+/**
+ * Exclui uma solicitação de coin.
+ */
+export async function deleteCoin(req, reply) {
+  try {
+    const { id } = req.params;
+    await deleteCoinService(id);
+    reply.send({ message: "Solicitação excluída com sucesso." });
+  } catch (error) {
+    console.error("Erro ao excluir a solicitação:", error);
+    reply.status(500).send({ error: "Erro ao excluir a solicitação." });
   }
 }
