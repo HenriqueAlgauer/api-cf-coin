@@ -179,12 +179,6 @@ export default async function prizeRoutes(app) {
         data: { status: "APPROVED" },
       });
 
-      // Subtrai os CF Coins do usuário
-      await prisma.user.update({
-        where: { id: redemption.userId },
-        data: { coins: { decrement: redemption.prize.cost } },
-      });
-
       reply.send(updatedRequest);
     } catch (error) {
       console.error("❌ Erro ao aprovar o resgate:", error);
