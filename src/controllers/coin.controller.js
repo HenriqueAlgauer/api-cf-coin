@@ -16,18 +16,14 @@ export async function createCoin(req, reply) {
     const { userId, taskId, message } = req.body;
 
     if (!userId || typeof userId !== "number") {
-      return reply
-        .status(400)
-        .send({
-          error: "O campo 'userId' é obrigatório e deve ser um número.",
-        });
+      return reply.status(400).send({
+        error: "O campo 'userId' é obrigatório e deve ser um número.",
+      });
     }
     if (!taskId || typeof taskId !== "number") {
-      return reply
-        .status(400)
-        .send({
-          error: "O campo 'taskId' é obrigatório e deve ser um número.",
-        });
+      return reply.status(400).send({
+        error: "O campo 'taskId' é obrigatório e deve ser um número.",
+      });
     }
 
     const coin = await createCoinService({ userId, taskId, message });
@@ -87,6 +83,25 @@ export async function getUserCoins(req, reply) {
   } catch (error) {
     console.error("Erro ao buscar moedas do usuário:", error);
     reply.status(500).send({ error: "Erro ao buscar as moedas." });
+  }
+}
+
+export async function getUserPendingCoins(req, reply) {
+  try {
+    const { userId } = req.params;
+    if (!userId || isNaN(userId)) {
+      return reply.status(400).send({ error: "ID do usuário inválido." });
+    }
+    const userCoins = await prisma.coin.findMany({
+      where: { userId: Number(userId), status: "PENDING" },
+      include: { task: { select: { name: true } } },
+    });
+    reply.send(userCoins);
+  } catch (error) {
+    console.error("Erro ao buscar moedas pendentes do usuário.", error);
+    reply
+      .status(500)
+      .send({ error: "Erro ao buscar moedas pendentes do usuário." });
   }
 }
 
