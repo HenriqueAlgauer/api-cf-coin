@@ -1,4 +1,3 @@
-// src/controllers/prize.controller.js
 import { prisma } from "../prisma/client.js";
 import {
   createPrizeService,
