@@ -150,6 +150,13 @@ export async function rejectCoin(req, reply) {
   try {
     const { id } = req.params;
     const { adminId } = req.body;
+
+    if (!adminId) {
+      return reply
+        .status(400)
+        .send({ error: "AdminId é obrigatório para rejeitar a coin." });
+    }
+
     const updatedCoin = await rejectCoinService(id, adminId);
     reply.send(updatedCoin);
   } catch (error) {

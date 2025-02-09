@@ -80,6 +80,11 @@ export async function updateCoinMessageService({ coinId, message }) {
 export async function rejectCoinService(coinId, adminId) {
   // Converte o adminId para número e verifica se é um administrador
   const numericAdminId = Number(adminId);
+
+  if (isNaN(numericAdminId)) {
+    throw new Error("ID do admin inválido.");
+  }
+
   const admin = await prisma.user.findUnique({ where: { id: numericAdminId } });
   if (!admin || admin.role !== "ADMIN") {
     throw new Error("Apenas ADMINs podem rejeitar moedas.");
