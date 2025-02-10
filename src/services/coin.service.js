@@ -26,6 +26,60 @@ export async function createCoinService({ userId, taskId, message }) {
   return coin;
 }
 
+export async function addCoinsForTaskService({ taskId, userIds, adminId }) {
+  // Validação básica
+  if (!taskId || !userIds || !Array.isArray(userIds) || userIds.length === 0) {
+    throw new Error(
+      "taskId e userIds são obrigatórios e userIds deve ser um array não vazio."
+    );
+  }
+
+  // Busca a tarefa
+  const task = await prisma.task.findUnique({
+    where: { id: Number(taskId) },
+  });
+  if (!task) {
+    throw new Error("Tarefa não encontrada.");
+  }
+  // Opcional: verificar se a visibilidade da tarefa é adequada
+  if (!["ADMIN", "AMBOS"].includes(task.visibility)) {
+    throw new Error("Esta tarefa não permite que o admin cadastre CF Coins.");
+  }
+
+  // Executa a operação para cada usuário dentro de uma transação
+  const createdCoins = await prisma.$transaction(async (tx) => {
+    const coinsCreated = [];
+    for (const userId of userIds) {
+      // Verifica se o usuário existe
+      const user = await tx.user.findUnique({
+        where: { id: Number(userId) },
+      });
+      if (!user) {
+        throw new Error(`Usuário com id ${userId} não encontrado.`);
+      }
+      // Cria o registro de Coin com status "APPROVED" e valor da recompensa da tarefa
+      const coin = await tx.coin.create({
+        data: {
+          user: { connect: { id: Number(userId) } },
+          task: { connect: { id: Number(taskId) } },
+          amount: task.reward,
+          status: "APPROVED",
+          approvedBy: adminId ? Number(adminId) : null,
+        },
+      });
+      // Atualiza o saldo do usuário (incrementa o campo 'coins')
+      await tx.user.update({
+        where: { id: Number(userId) },
+        data: { coins: { increment: task.reward } },
+      });
+      coinsCreated.push(coin);
+    }
+    return coinsCreated;
+  });
+
+  return createdCoins;
+}
+
 /**
  * Aprova uma solicitação de coin e incrementa o saldo do usuário.
  */

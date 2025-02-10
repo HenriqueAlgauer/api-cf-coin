@@ -6,6 +6,7 @@ import {
   updateCoinMessageService,
   rejectCoinService,
   deleteCoinService,
+  addCoinsForTaskService,
 } from "../services/coin.service.js";
 
 /**
@@ -34,6 +35,34 @@ export async function createCoin(req, reply) {
   }
 }
 
+export async function addCoinsForTaskController(req, reply) {
+  try {
+    const { taskId, userIds, adminId } = req.body;
+    if (
+      !taskId ||
+      !userIds ||
+      !Array.isArray(userIds) ||
+      userIds.length === 0
+    ) {
+      return reply
+        .status(400)
+        .send({
+          error:
+            "taskId e userIds são obrigatórios e userIds deve ser um array não vazio.",
+        });
+    }
+    const coins = await addCoinsForTaskService({ taskId, userIds, adminId });
+    reply.status(201).send({
+      message: "CF Coins cadastradas com sucesso.",
+      coins,
+    });
+  } catch (error) {
+    console.error("Erro ao cadastrar CF Coins:", error);
+    reply.status(500).send({
+      error: error.message || "Erro ao cadastrar CF Coins.",
+    });
+  }
+}
 /**
  * Lista todas as coins.
  */

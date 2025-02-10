@@ -1,4 +1,3 @@
-// src/routes/coin.routes.js
 import {
   createCoin,
   getCoins,
@@ -9,6 +8,7 @@ import {
   rejectCoin,
   deleteCoin,
   getUserPendingCoins,
+  addCoinsForTaskController,
 } from "../controllers/coin.controller.js";
 
 export default async function coinRoutes(app) {
@@ -21,4 +21,5 @@ export default async function coinRoutes(app) {
   app.patch("/coins/:id", updateCoinMessage);
   app.patch("/coins/:id/reject", rejectCoin);
   app.delete("/coins/:id", deleteCoin);
+  app.post("/coins/admin", addCoinsForTaskController);
 }
