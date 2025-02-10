@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -67,7 +67,7 @@ model Prize {
 model PrizeRedemption {
   id        Int     @id @default(autoincrement())
   userId    Int     
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade) 
+user        User    @relation(fields: [userId], references: [id],  onDelete: Cascade) 
 
   prizeId   Int     
   prize     Prize   @relation(fields: [prizeId], references: [id], onDelete: Cascade)
