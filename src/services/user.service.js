@@ -1,5 +1,5 @@
 // src/services/user.service.js
-import { prisma } from "../prisma/client.js";
+import { prisma } from "../../prisma/client.js";
 import bcrypt from "bcrypt";
 
 /**

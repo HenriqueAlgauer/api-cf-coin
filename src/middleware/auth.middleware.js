@@ -1,4 +1,4 @@
-import { prisma } from "../prisma/client.js";
+import { prisma } from "../../prisma/client";
 
 /**
  * Middleware para verificar se o usuário é ADMIN.
@@ -17,11 +17,9 @@ export async function verifyAdmin(request, reply) {
   });
 
   if (!admin || admin.role !== "ADMIN") {
-    reply
-      .status(403)
-      .send({
-        error: "Acesso negado: apenas ADMINs podem executar essa operação.",
-      });
+    reply.status(403).send({
+      error: "Acesso negado: apenas ADMINs podem executar essa operação.",
+    });
     return;
   }
 }

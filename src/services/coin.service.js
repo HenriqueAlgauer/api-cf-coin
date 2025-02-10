@@ -1,5 +1,5 @@
 // src/services/coin.service.js
-import { prisma } from "../prisma/client.js";
+import { prisma } from "../../prisma/client.js";
 
 /**
  * Cria uma nova coin.
