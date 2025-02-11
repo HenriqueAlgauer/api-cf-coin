@@ -1,5 +1,7 @@
 import bcrypt from "bcrypt";
-import { prisma } from "../prisma/client.js";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export default async function authRoutes(app) {
   app.post("/login", async (request, reply) => {
