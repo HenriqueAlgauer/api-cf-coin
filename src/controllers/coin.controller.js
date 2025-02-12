@@ -1,5 +1,7 @@
-// src/controllers/coin.controller.js
-import { prisma } from "../prisma/client.js";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
 import {
   createCoinService,
   approveCoinRequest,
@@ -44,12 +46,10 @@ export async function addCoinsForTaskController(req, reply) {
       !Array.isArray(userIds) ||
       userIds.length === 0
     ) {
-      return reply
-        .status(400)
-        .send({
-          error:
-            "taskId e userIds são obrigatórios e userIds deve ser um array não vazio.",
-        });
+      return reply.status(400).send({
+        error:
+          "taskId e userIds são obrigatórios e userIds deve ser um array não vazio.",
+      });
     }
     const coins = await addCoinsForTaskService({ taskId, userIds, adminId });
     reply.status(201).send({

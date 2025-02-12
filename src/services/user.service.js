@@ -1,5 +1,7 @@
 // src/services/user.service.js
-import { prisma } from "../prisma/client.js";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 import bcrypt from "bcrypt";
 
 /**

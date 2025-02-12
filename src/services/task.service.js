@@ -1,5 +1,7 @@
 // src/services/task.service.js
-import { prisma } from "../prisma/client.js";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 /**
  * Cria uma nova tarefa.

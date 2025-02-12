@@ -1,5 +1,7 @@
 // src/services/coin.service.js
-import { prisma } from "../prisma/client.js";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 /**
  * Cria uma nova coin.
