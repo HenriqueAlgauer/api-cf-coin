@@ -19,6 +19,6 @@ app.register(authRoutes);
 app.register(taskRoutes);
 app.register(prizeRoutes);
 
-app.listen({ host: "0.0.0.0", port: 3000 }, () =>
-  console.log("🚀 Server running on port 3000 and accessible externally")
+app.listen({ host: "127.0.0.1", port: 3001 }, () =>
+  console.log("🚀 Server running on port 3001 and accessible internally")
 );
