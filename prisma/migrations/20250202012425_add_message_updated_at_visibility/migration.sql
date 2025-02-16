@@ -1,6 +1,0 @@
--- AlterTable
-ALTER TABLE `Coin` ADD COLUMN `message` VARCHAR(191) NULL,
-    ADD COLUMN `updatedAt` DATETIME(3) NULL;
-
--- AlterTable
-ALTER TABLE `Task` ADD COLUMN `visibility` VARCHAR(191) NOT NULL DEFAULT 'AMBOS';
