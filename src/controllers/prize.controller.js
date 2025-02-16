@@ -29,8 +29,15 @@ export async function createPrize(req, reply) {
     const prize = await createPrizeService({ name, description, cost });
     reply.status(201).send(prize);
   } catch (error) {
-    console.error("Erro ao criar prêmio:", error);
-    reply.status(500).send({ error: "Erro ao criar prêmio." });
+    if (error.code === "P2002" && error.meta?.target?.includes("name")) {
+      // Significa que a constraint UNIQUE do 'name' foi violada
+      reply
+        .status(400)
+        .send({ error: "Já existe um prêmio com este nome. Tente outro." });
+    } else {
+      console.error("Erro ao criar prêmio:", error);
+      reply.status(500).send({ error: "Erro ao criar prêmio." });
+    }
   }
 }
 
@@ -62,8 +69,15 @@ export async function updatePrize(req, reply) {
     });
     reply.send(prize);
   } catch (error) {
-    console.error("Erro ao atualizar prêmio:", error);
-    reply.status(500).send({ error: "Erro ao atualizar prêmio." });
+    if (error.code === "P2002" && error.meta?.target?.includes("name")) {
+      // Significa que a constraint UNIQUE do 'name' foi violada
+      reply
+        .status(400)
+        .send({ error: "Já existe um prêmio com este nome. Tente outro." });
+    } else {
+      console.error("Erro ao criar prêmio:", error);
+      reply.status(500).send({ error: "Erro ao criar prêmio." });
+    }
   }
 }
 
