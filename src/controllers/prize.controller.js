@@ -15,16 +15,14 @@ import {
  */
 export async function createPrize(req, reply) {
   try {
-    const { name, description, cost } = req.body;
-    if (
-      !name ||
-      !description ||
-      cost === undefined ||
-      typeof cost !== "number"
-    ) {
+    let { name, description, cost } = req.body;
+    if (!name || cost === undefined || typeof cost !== "number") {
       return reply
         .status(400)
         .send({ error: "Todos os campos são obrigatórios." });
+    }
+    if (!description) {
+      description = "";
     }
     const prize = await createPrizeService({ name, description, cost });
     reply.status(201).send(prize);
@@ -60,7 +58,17 @@ export async function getPrizes(req, reply) {
 export async function updatePrize(req, reply) {
   try {
     const { id } = req.params;
-    const { name, description, cost } = req.body;
+    let { name, description, cost } = req.body;
+
+    if (!name || cost === undefined || typeof cost !== "number") {
+      return reply
+        .status(400)
+        .send({ error: "Todos os campos são obrigatórios." });
+    }
+
+    if (!description) {
+      description = "";
+    }
     const prize = await updatePrizeService({
       id: Number(id),
       name,

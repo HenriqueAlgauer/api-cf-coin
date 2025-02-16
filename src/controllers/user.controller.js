@@ -92,19 +92,28 @@ export async function getUserTransactions(req, reply) {
 export async function createUser(req, reply) {
   try {
     const { name, email, password, department, role } = req.body;
-    const user = await createUserService({
+    if (!name || !email || !password || !department || !role) {
+      return reply
+        .status(400)
+        .send({ error: "Todos os campos são obrigatórios." });
+    }
+
+    const newUser = await createUserService({
       name,
       email,
       password,
       department,
       role,
     });
-    reply.status(201).send(user);
+
+    reply.status(201).send(newUser);
   } catch (error) {
-    console.error("Erro ao criar usuário:", error);
-    reply
-      .status(500)
-      .send({ error: error.message || "Erro ao criar usuário." });
+    if (error.code === "P2002" && error.meta?.target?.includes("email")) {
+      reply.status(400).send({ error: "Já existe um usuário com esse email." });
+    } else {
+      console.error("Erro ao criar usuário:", error);
+      reply.status(500).send({ error: "Erro ao criar usuário." });
+    }
   }
 }
 
@@ -128,17 +137,27 @@ export async function deleteUser(req, reply) {
 export async function updateUser(req, reply) {
   try {
     const { id } = req.params;
-    const { name, email, department, role, coins } = req.body;
+    const { name, email, department, role } = req.body;
+    if (!name || !email || !department || !role) {
+      return reply
+        .status(400)
+        .send({ error: "Todos os campos são obrigatórios." });
+    }
+
     const updatedUser = await updateUserService(Number(id), {
       name,
       email,
       department,
       role,
-      coins,
     });
+
     reply.send(updatedUser);
   } catch (error) {
-    console.error("Erro ao atualizar o usuário:", error);
-    reply.status(500).send({ error: "Erro ao atualizar o usuário" });
+    if (error.code === "P2002" && error.meta?.target?.includes("email")) {
+      reply.status(400).send({ error: "Já existe um usuário com esse email." });
+    } else {
+      console.error("Erro ao atualizar usuário:", error);
+      reply.status(500).send({ error: "Erro ao atualizar usuário." });
+    }
   }
 }
