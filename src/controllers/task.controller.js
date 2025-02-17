@@ -42,7 +42,13 @@ export async function createTask(req, reply) {
     reply.status(201).send(task);
   } catch (error) {
     console.error("Erro ao criar a tarefa:", error);
-    reply.status(500).send({ error: "Erro interno ao criar a tarefa." });
+    if (error.code === "P2002" && error.meta?.target?.includes("name")) {
+      reply
+        .status(400)
+        .send({ error: "Já existe uma tarefa com este nome. Tente outro." });
+    } else {
+      reply.status(500).send({ error: "Erro interno ao criar a tarefa." });
+    }
   }
 }
 
@@ -81,7 +87,15 @@ export async function updateTask(req, reply) {
     reply.send(task);
   } catch (error) {
     console.error("Erro ao atualizar a tarefa:", error);
-    reply.status(500).send({ error: "Erro ao atualizar a tarefa." });
+    if (error.code === "P2025") {
+      reply.status(404).send({ error: "Tarefa não encontrada." });
+    } else if (error.code === "P2002" && error.meta?.target?.includes("name")) {
+      reply
+        .status(400)
+        .send({ error: "Já existe uma tarefa com este nome. Tente outro." });
+    } else {
+      reply.status(500).send({ error: "Erro ao atualizar a tarefa." });
+    }
   }
 }
 
@@ -122,6 +136,10 @@ export async function deleteTask(req, reply) {
     reply.send({ message: "Tarefa deletada com sucesso." });
   } catch (error) {
     console.error("Erro ao deletar a tarefa:", error);
-    reply.status(500).send({ error: "Erro ao deletar a tarefa." });
+    if (error.code === "P2025") {
+      reply.status(404).send({ error: "Tarefa não encontrada para exclusão." });
+    } else {
+      reply.status(500).send({ error: "Erro ao deletar a tarefa." });
+    }
   }
 }

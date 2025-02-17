@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
-
 const prisma = new PrismaClient();
+
 import {
   createPrizeService,
   updatePrizeService,
@@ -28,7 +28,7 @@ export async function createPrize(req, reply) {
     reply.status(201).send(prize);
   } catch (error) {
     if (error.code === "P2002" && error.meta?.target?.includes("name")) {
-      // Significa que a constraint UNIQUE do 'name' foi violada
+      // Nome do Prêmio é único
       reply
         .status(400)
         .send({ error: "Já existe um prêmio com este nome. Tente outro." });
@@ -78,13 +78,18 @@ export async function updatePrize(req, reply) {
     reply.send(prize);
   } catch (error) {
     if (error.code === "P2002" && error.meta?.target?.includes("name")) {
-      // Significa que a constraint UNIQUE do 'name' foi violada
+      // Nome do Prêmio duplicado
       reply
         .status(400)
         .send({ error: "Já existe um prêmio com este nome. Tente outro." });
+    } else if (error.code === "P2025") {
+      // Record not found
+      reply
+        .status(404)
+        .send({ error: "Prêmio não encontrado para atualizar." });
     } else {
-      console.error("Erro ao criar prêmio:", error);
-      reply.status(500).send({ error: "Erro ao criar prêmio." });
+      console.error("Erro ao atualizar prêmio:", error);
+      reply.status(500).send({ error: "Erro ao atualizar prêmio." });
     }
   }
 }
@@ -99,6 +104,11 @@ export async function deletePrize(req, reply) {
     reply.send({ message: "Prêmio deletado com sucesso." });
   } catch (error) {
     console.error("Erro ao deletar prêmio:", error);
+    if (error.code === "P2025") {
+      return reply
+        .status(404)
+        .send({ error: "Prêmio não encontrado para exclusão." });
+    }
     reply.status(500).send({ error: "Erro ao deletar prêmio." });
   }
 }
@@ -118,7 +128,12 @@ export async function requestPrizeRedemption(req, reply) {
     reply.status(201).send(redemption);
   } catch (error) {
     console.error("Erro ao solicitar resgate:", error);
-    reply.status(500).send({ error: error.message });
+    if (error.code === "P2025") {
+      // Se o usuário ou prêmio não existe
+      reply.status(404).send({ error: "Usuário ou Prêmio não encontrado." });
+    } else {
+      reply.status(500).send({ error: error.message });
+    }
   }
 }
 
@@ -151,7 +166,11 @@ export async function approvePrizeRedemption(req, reply) {
     reply.send(updatedRedemption);
   } catch (error) {
     console.error("Erro ao aprovar o resgate:", error);
-    reply.status(500).send({ error: "Erro ao aprovar o resgate." });
+    if (error.code === "P2025") {
+      reply.status(404).send({ error: "Resgate não encontrado." });
+    } else {
+      reply.status(500).send({ error: "Erro ao aprovar o resgate." });
+    }
   }
 }
 
@@ -165,7 +184,11 @@ export async function rejectPrizeRedemption(req, reply) {
     reply.send(updatedRedemption);
   } catch (error) {
     console.error("Erro ao rejeitar o resgate:", error);
-    reply.status(500).send({ error: "Erro ao rejeitar o resgate." });
+    if (error.code === "P2025") {
+      reply.status(404).send({ error: "Resgate não encontrado." });
+    } else {
+      reply.status(500).send({ error: "Erro ao rejeitar o resgate." });
+    }
   }
 }
 

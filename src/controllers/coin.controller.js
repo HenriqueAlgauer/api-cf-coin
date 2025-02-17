@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-
 const prisma = new PrismaClient();
 
 import {
@@ -33,10 +32,20 @@ export async function createCoin(req, reply) {
     reply.status(201).send(coin);
   } catch (error) {
     console.error(error);
-    reply.status(500).send({ error: "Erro interno ao criar coin" });
+    if (error.code === "P2002") {
+      // Se houver alguma constraint unique em Coin que foi violada, pode tratar
+      reply
+        .status(400)
+        .send({ error: "Já existe um registro Coin duplicado." });
+    } else {
+      reply.status(500).send({ error: "Erro interno ao criar coin" });
+    }
   }
 }
 
+/**
+ * Adiciona coins para vários usuários, com base em uma tarefa, aprovando-as automaticamente.
+ */
 export async function addCoinsForTaskController(req, reply) {
   try {
     const { taskId, userIds, adminId } = req.body;
@@ -58,11 +67,18 @@ export async function addCoinsForTaskController(req, reply) {
     });
   } catch (error) {
     console.error("Erro ao cadastrar CF Coins:", error);
-    reply.status(500).send({
-      error: error.message || "Erro ao cadastrar CF Coins.",
-    });
+    if (error.code === "P2025") {
+      reply.status(404).send({
+        error: "Tarefa ou algum usuário não encontrado para cadastrar coins.",
+      });
+    } else {
+      reply.status(500).send({
+        error: error.message || "Erro ao cadastrar CF Coins.",
+      });
+    }
   }
 }
+
 /**
  * Lista todas as coins.
  */
@@ -115,6 +131,9 @@ export async function getUserCoins(req, reply) {
   }
 }
 
+/**
+ * Lista apenas as coins pendentes de um usuário específico.
+ */
 export async function getUserPendingCoins(req, reply) {
   try {
     const { userId } = req.params;
@@ -204,6 +223,9 @@ export async function deleteCoin(req, reply) {
     reply.send({ message: "Solicitação excluída com sucesso." });
   } catch (error) {
     console.error("Erro ao excluir a solicitação:", error);
+    if (error.code === "P2025") {
+      return reply.status(404).send({ error: "Solicitação não encontrada." });
+    }
     reply.status(500).send({ error: "Erro ao excluir a solicitação." });
   }
 }

@@ -46,15 +46,24 @@ export async function updateUserEmail(req, reply) {
   try {
     const { id } = req.params;
     const { email } = req.body;
-    if (!email)
+    if (!email) {
       return reply
         .status(400)
         .send({ error: "O campo 'email' é obrigatório." });
+    }
     const updatedUser = await updateUserEmailService(Number(id), email);
     reply.send(updatedUser);
   } catch (error) {
     console.error("Erro ao atualizar o email do usuário:", error);
-    reply.status(500).send({ error: "Erro ao atualizar o email do usuário." });
+    if (error.code === "P2002" && error.meta?.target?.includes("email")) {
+      reply.status(400).send({ error: "Email já cadastrado." });
+    } else if (error.code === "P2025") {
+      reply.status(404).send({ error: "Usuário não encontrado." });
+    } else {
+      reply
+        .status(500)
+        .send({ error: "Erro ao atualizar o email do usuário." });
+    }
   }
 }
 
@@ -127,7 +136,11 @@ export async function deleteUser(req, reply) {
     reply.send({ message: "Usuário excluído com sucesso" });
   } catch (error) {
     console.error("Erro ao excluir usuário:", error);
-    reply.status(500).send({ error: "Erro ao excluir o usuário" });
+    if (error.code === "P2025") {
+      reply.status(404).send({ error: "Usuário não encontrado." });
+    } else {
+      reply.status(500).send({ error: "Erro ao excluir o usuário" });
+    }
   }
 }
 
@@ -155,6 +168,8 @@ export async function updateUser(req, reply) {
   } catch (error) {
     if (error.code === "P2002" && error.meta?.target?.includes("email")) {
       reply.status(400).send({ error: "Já existe um usuário com esse email." });
+    } else if (error.code === "P2025") {
+      reply.status(404).send({ error: "Usuário não encontrado." });
     } else {
       console.error("Erro ao atualizar usuário:", error);
       reply.status(500).send({ error: "Erro ao atualizar usuário." });
