@@ -15,7 +15,7 @@ export default async function authRoutes(app) {
         email: true,
         name: true,
         password: true,
-        department: true, // Agora retorna o department
+        department: true,
         role: true,
       },
     });
